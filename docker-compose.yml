@@ -1,0 +1,83 @@
+services:
+  postgres:
+    image: postgis/postgis:18-3.6
+    platform: linux/amd64
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: gift_wishlist
+      POSTGRES_USER: dev
+      POSTGRES_PASSWORD: pass
+    ports:
+      - "5432:5432"
+    volumes:
+      - gift_wishlist_postgres_data:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U dev -d gift_wishlist"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  api:
+    build:
+      context: /Users/vovilonn/Documents/work/Programming/tg-gift-wishlist/backend
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      DATABASE_URL: postgresql://dev:pass@postgres:5432/gift_wishlist?schema=public
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN}
+      WEB_APP_URL: ${WEB_APP_URL:-http://localhost:8080}
+      BOT_USERNAME: ${BOT_USERNAME:-}
+      ADMIN_TELEGRAM_IDS: ${ADMIN_TELEGRAM_IDS:-}
+      JWT_SECRET: ${JWT_SECRET:-change-this-jwt-secret-in-production}
+      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-7d}
+      CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:8080}
+      TELEGRAM_INITDATA_MAX_AGE_SECONDS: ${TELEGRAM_INITDATA_MAX_AGE_SECONDS:-86400}
+      ENABLE_DEMO_AUTH: ${ENABLE_DEMO_AUTH:-true}
+      DEMO_AUTH_KEY: ${DEMO_AUTH_KEY:-}
+      IMAGE_PROXY_MAX_BYTES: ${IMAGE_PROXY_MAX_BYTES:-8388608}
+    command: sh -c "npm run prisma:migrate:deploy && node dist/api/index.js"
+    ports:
+      - "${API_HOST_PORT:-3001}:3000"
+
+  bot:
+    build:
+      context: /Users/vovilonn/Documents/work/Programming/tg-gift-wishlist/backend
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      api:
+        condition: service_started
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgresql://dev:pass@postgres:5432/gift_wishlist?schema=public
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN}
+      WEB_APP_URL: ${WEB_APP_URL:-http://localhost:8080}
+      BOT_USERNAME: ${BOT_USERNAME:-}
+      ADMIN_TELEGRAM_IDS: ${ADMIN_TELEGRAM_IDS:-}
+      JWT_SECRET: ${JWT_SECRET:-change-this-jwt-secret-in-production}
+      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-7d}
+      TELEGRAM_INITDATA_MAX_AGE_SECONDS: ${TELEGRAM_INITDATA_MAX_AGE_SECONDS:-86400}
+      CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:8080}
+    command: sh -c "npm run prisma:migrate:deploy && node dist/bot/index.js"
+
+  web:
+    build:
+      context: /Users/vovilonn/Documents/work/Programming/tg-gift-wishlist/web
+      args:
+        VITE_API_URL: ${VITE_API_URL:-/api}
+        VITE_ENABLE_DEMO_AUTH: ${VITE_ENABLE_DEMO_AUTH:-true}
+        VITE_DEMO_AUTH_KEY: ${VITE_DEMO_AUTH_KEY:-}
+    restart: unless-stopped
+    depends_on:
+      api:
+        condition: service_started
+    ports:
+      - "8080:80"
+
+volumes:
+  gift_wishlist_postgres_data:

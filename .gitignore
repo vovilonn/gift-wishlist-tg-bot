@@ -1,0 +1,13 @@
+node_modules
+dist
+.DS_Store
+.env.local
+coverage
+backend/node_modules
+backend/dist
+web/node_modules
+web/dist
+
+.env
+.env.*
+!.env.example

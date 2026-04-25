@@ -1,0 +1,90 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String   @id @default(uuid())
+  telegramId   String   @unique
+  username     String?
+  firstName    String?
+  lastName     String?
+  photoUrl     String?
+  role         UserRole @default(USER)
+  reservations Gift[]   @relation("GiftReservation")
+  createdGifts Gift[]   @relation("GiftCreator")
+  history      ReservationHistory[]
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  lastSeenAt   DateTime?
+}
+
+model Gift {
+  id               String               @id @default(uuid())
+  title            String
+  description      String?
+  imageUrl         String?
+  linkUrl          String?
+  price            Decimal?             @db.Decimal(12, 2)
+  currency         String?
+  priority         GiftPriority?
+  status           GiftStatus           @default(ACTIVE)
+  reservedByUserId String?
+  reservedByUser   User?                @relation("GiftReservation", fields: [reservedByUserId], references: [id])
+  reservedAt       DateTime?
+  createdByUserId  String?
+  createdByUser    User?                @relation("GiftCreator", fields: [createdByUserId], references: [id])
+  history          ReservationHistory[]
+  createdAt        DateTime             @default(now())
+  updatedAt        DateTime             @updatedAt
+
+  @@index([status])
+  @@index([reservedByUserId])
+  @@index([createdAt])
+}
+
+model ReservationHistory {
+  id        String            @id @default(uuid())
+  giftId    String
+  gift      Gift              @relation(fields: [giftId], references: [id])
+  userId    String?
+  user      User?             @relation(fields: [userId], references: [id])
+  action    ReservationAction
+  metadata  Json?
+  createdAt DateTime          @default(now())
+
+  @@index([giftId])
+  @@index([userId])
+  @@index([createdAt])
+}
+
+enum UserRole {
+  USER
+  ADMIN
+}
+
+enum GiftStatus {
+  ACTIVE
+  RESERVED
+  PURCHASED
+  HIDDEN
+  ARCHIVED
+}
+
+enum GiftPriority {
+  LOW
+  MEDIUM
+  HIGH
+}
+
+enum ReservationAction {
+  RESERVED
+  CANCELLED_BY_USER
+  RELEASED_BY_ADMIN
+  MARKED_PURCHASED
+  MARKED_ACTIVE
+}
