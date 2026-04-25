@@ -45,7 +45,7 @@ services:
 
   bot:
     build:
-      context: /Users/vovilonn/Documents/work/Programming/tg-gift-wishlist/backend
+      context: ./backend
     restart: unless-stopped
     depends_on:
       postgres:
@@ -67,7 +67,7 @@ services:
 
   web:
     build:
-      context: /Users/vovilonn/Documents/work/Programming/tg-gift-wishlist/web
+      context: ./web
       args:
         VITE_API_URL: ${VITE_API_URL:-/api}
         VITE_ENABLE_DEMO_AUTH: ${VITE_ENABLE_DEMO_AUTH:-true}
