@@ -64,6 +64,8 @@ const giftFilterSchema = z.object({
     .default("createdAt_desc")
 });
 
+const currencySchema = z.enum(["MDL", "USD", "UAH"]);
+
 const giftCreateSchema = z.object({
   title: z.string().trim().min(2).max(120),
   description: z.string().trim().max(2000).optional().nullable(),
@@ -74,7 +76,7 @@ const giftCreateSchema = z.object({
     .optional()
     .nullable()
     .transform((value) => (value === null || value === undefined ? null : String(value))),
-  currency: z.string().trim().max(10).optional().nullable(),
+  currency: currencySchema.optional().nullable(),
   priority: z.nativeEnum(GiftPriority).optional().nullable()
 });
 

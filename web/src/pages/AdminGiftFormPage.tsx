@@ -14,9 +14,18 @@ type GiftForm = {
   imageUrl: string;
   linkUrl: string;
   price: string;
-  currency: string;
+  currency: "MDL" | "USD" | "UAH";
   priority: GiftPriority | "";
 };
+
+const allowedCurrencies = ["MDL", "USD", "UAH"] as const;
+
+const normalizeCurrency = (
+  currency: string | null | undefined,
+): GiftForm["currency"] =>
+  allowedCurrencies.includes((currency ?? "") as GiftForm["currency"])
+    ? (currency as GiftForm["currency"])
+    : "MDL";
 
 const initialForm: GiftForm = {
   title: "",
@@ -24,8 +33,8 @@ const initialForm: GiftForm = {
   imageUrl: "",
   linkUrl: "",
   price: "",
-  currency: "EUR",
-  priority: ""
+  currency: "UAH",
+  priority: "",
 };
 
 export const AdminGiftFormPage = () => {
@@ -41,7 +50,7 @@ export const AdminGiftFormPage = () => {
   const giftQuery = useQuery({
     queryKey: ["gift-details", giftId],
     queryFn: () => getGiftById(token, giftId!),
-    enabled: isEdit
+    enabled: isEdit,
   });
 
   useEffect(() => {
@@ -54,8 +63,8 @@ export const AdminGiftFormPage = () => {
       imageUrl: giftQuery.data.imageUrl ?? "",
       linkUrl: giftQuery.data.linkUrl ?? "",
       price: giftQuery.data.price ?? "",
-      currency: giftQuery.data.currency ?? "EUR",
-      priority: giftQuery.data.priority ?? ""
+      currency: normalizeCurrency(giftQuery.data.currency),
+      priority: giftQuery.data.priority ?? "",
     });
   }, [giftQuery.data]);
 
@@ -68,7 +77,7 @@ export const AdminGiftFormPage = () => {
         linkUrl: form.linkUrl.trim() || null,
         price: form.price.trim() || null,
         currency: form.currency.trim() || null,
-        priority: form.priority || null
+        priority: form.priority || null,
       };
       if (isEdit && giftId) {
         return updateGift(token, giftId, payload);
@@ -77,15 +86,24 @@ export const AdminGiftFormPage = () => {
     },
     onSuccess: async (gift) => {
       await queryClient.invalidateQueries({ queryKey: ["gifts"] });
-      await queryClient.invalidateQueries({ queryKey: ["admin-dashboard-gifts"] });
+      await queryClient.invalidateQueries({
+        queryKey: ["admin-dashboard-gifts"],
+      });
       navigate(`/gift/${gift.id}`);
     },
     onError: (error) => {
-      setErrorMessage(error instanceof Error ? error.message : "Не удалось сохранить изменения. Повторите попытку.");
-    }
+      setErrorMessage(
+        error instanceof Error
+          ? error.message
+          : "Не удалось сохранить изменения. Повторите попытку.",
+      );
+    },
   });
 
-  const formTitle = useMemo(() => (isEdit ? "Редактирование подарка" : "Новый подарок"), [isEdit]);
+  const formTitle = useMemo(
+    () => (isEdit ? "Редактирование подарка" : "Новый подарок"),
+    [isEdit],
+  );
   const submitText = useMemo(() => {
     if (mutation.isPending) {
       return isEdit ? "Сохраняем изменения..." : "Создаём подарок...";
@@ -94,7 +112,11 @@ export const AdminGiftFormPage = () => {
   }, [isEdit, mutation.isPending]);
 
   if (user.role !== "ADMIN") {
-    return <p className="ui-alert ui-alert--error">Недостаточно прав для доступа к этому разделу.</p>;
+    return (
+      <p className="ui-alert ui-alert--error">
+        Недостаточно прав для доступа к этому разделу.
+      </p>
+    );
   }
 
   if (isEdit && giftQuery.isLoading) {
@@ -119,7 +141,9 @@ export const AdminGiftFormPage = () => {
           Название
           <Input
             value={form.title}
-            onChange={(event) => setForm((current) => ({ ...current, title: event.target.value }))}
+            onChange={(event) =>
+              setForm((current) => ({ ...current, title: event.target.value }))
+            }
             placeholder="Например: LEGO, книга или наушники"
             required
             minLength={2}
@@ -130,7 +154,12 @@ export const AdminGiftFormPage = () => {
           Описание
           <Textarea
             value={form.description}
-            onChange={(event) => setForm((current) => ({ ...current, description: event.target.value }))}
+            onChange={(event) =>
+              setForm((current) => ({
+                ...current,
+                description: event.target.value,
+              }))
+            }
             placeholder="Укажите важные детали: модель, цвет, размер, предпочтения"
             maxLength={2000}
           />
@@ -140,7 +169,12 @@ export const AdminGiftFormPage = () => {
           <Input
             type="url"
             value={form.linkUrl}
-            onChange={(event) => setForm((current) => ({ ...current, linkUrl: event.target.value }))}
+            onChange={(event) =>
+              setForm((current) => ({
+                ...current,
+                linkUrl: event.target.value,
+              }))
+            }
             placeholder="https://..."
           />
         </label>
@@ -149,7 +183,12 @@ export const AdminGiftFormPage = () => {
           <Input
             type="url"
             value={form.imageUrl}
-            onChange={(event) => setForm((current) => ({ ...current, imageUrl: event.target.value }))}
+            onChange={(event) =>
+              setForm((current) => ({
+                ...current,
+                imageUrl: event.target.value,
+              }))
+            }
             placeholder="https://..."
           />
         </label>
@@ -160,31 +199,48 @@ export const AdminGiftFormPage = () => {
             min={0}
             step="0.01"
             value={form.price}
-            onChange={(event) => setForm((current) => ({ ...current, price: event.target.value }))}
+            onChange={(event) =>
+              setForm((current) => ({ ...current, price: event.target.value }))
+            }
             placeholder="50"
           />
         </label>
         <label>
           Валюта
-          <Select value={form.currency} onChange={(event) => setForm((current) => ({ ...current, currency: event.target.value }))}>
-            <option value="EUR">EUR</option>
-            <option value="USD">USD</option>
+          <Select
+            value={form.currency}
+            onChange={(event) =>
+              setForm((current) => ({
+                ...current,
+                currency: event.target.value as GiftForm["currency"],
+              }))
+            }
+          >
             <option value="MDL">MDL</option>
-            <option value="RUB">RUB</option>
-            <option value="RON">RON</option>
-            <option value="Other">Другая</option>
+            <option value="USD">USD</option>
+            <option value="UAH">UAH</option>
           </Select>
         </label>
         <label>
           Приоритет
-          <Select value={form.priority} onChange={(event) => setForm((current) => ({ ...current, priority: event.target.value as GiftPriority | "" }))}>
+          <Select
+            value={form.priority}
+            onChange={(event) =>
+              setForm((current) => ({
+                ...current,
+                priority: event.target.value as GiftPriority | "",
+              }))
+            }
+          >
             <option value="">Не указан</option>
             <option value="LOW">Низкий</option>
             <option value="MEDIUM">Средний</option>
             <option value="HIGH">Высокий</option>
           </Select>
         </label>
-        {errorMessage ? <p className="ui-alert ui-alert--error">{errorMessage}</p> : null}
+        {errorMessage ? (
+          <p className="ui-alert ui-alert--error">{errorMessage}</p>
+        ) : null}
         <div className="gift-form-actions">
           <Button type="submit" disabled={mutation.isPending}>
             {submitText}
