@@ -19,7 +19,7 @@ services:
 
   api:
     build:
-      context: /Users/vovilonn/Documents/work/Programming/tg-gift-wishlist/backend
+      context: ./backend
     restart: unless-stopped
     depends_on:
       postgres:
